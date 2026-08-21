@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>旅行隨身助手 Travel Go (雲端同步版)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Font: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .modal-backdrop {
+      background-color: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-24 select-none">
+
+  <header class="bg-indigo-600 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
+          <i class="fa-solid fa-plane-departure text-white text-sm"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base leading-tight">旅行隨身助手</h1>
+          <p class="text-[10px] text-indigo-200">Google Sheets 雲端協作版</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openConfigModal()" class="bg-indigo-700/80 hover:bg-indigo-700 text-indigo-100 text-[11px] px-2.5 py-1 rounded-full border border-indigo-400/30 flex items-center gap-1 transition">
+          <i class="fa-solid fa-gear"></i> 設定雲端
+        </button>
+        <div id="connection-badge" class="flex items-center gap-1.5 bg-indigo-700/80 px-2.5 py-1 rounded-full text-[11px] font-medium border border-indigo-400/30">
+          <span id="conn-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="network-text">已連線</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation Bar -->
+    <nav class="max-w-md mx-auto flex border-t border-indigo-500/40 text-[11px] font-medium overflow-x-auto no-scrollbar">
+      <button onclick="switchTab('exchange')" id="tab-btn-exchange" class="flex-1 min-w-[64px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-white text-white font-semibold transition-all">
+        <i class="fa-solid fa-calculator text-sm"></i>
+        <span>匯率換算</span>
+      </button>
+      <button onclick="switchTab('itinerary')" id="tab-btn-itinerary" class="flex-1 min-w-[64px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-transparent text-indigo-200 hover:text-white transition-all">
+        <i class="fa-solid fa-calendar-day text-sm"></i>
+        <span>每日行程</span>
+      </button>
+      <button onclick="switchTab('shopping')" id="tab-btn-shopping" class="flex-1 min-w-[64px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-transparent text-indigo-200 hover:text-white transition-all">
+        <i class="fa-solid fa-bag-shopping text-sm"></i>
+        <span>血拼名單</span>
+      </button>
+      <button onclick="switchTab('expenses')" id="tab-btn-expenses" class="flex-1 min-w-[64px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-transparent text-indigo-200 hover:text-white transition-all">
+        <i class="fa-solid fa-ticket text-sm"></i>
+        <span>門票車票</span>
+      </button>
+      <button onclick="switchTab('weather')" id="tab-btn-weather" class="flex-1 min-w-[64px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-transparent text-indigo-200 hover:text-white transition-all">
+        <i class="fa-solid fa-cloud-sun text-sm"></i>
+        <span>天氣預報</span>
+      </button>
+      <button onclick="switchTab('translate')" id="tab-btn-translate" class="flex-1 min-w-[64px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-transparent text-indigo-200 hover:text-white transition-all">
+        <i class="fa-solid fa-language text-sm"></i>
+        <span>旅行翻譯</span>
+      </button>
+    </nav>
+  </header>
+
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- TAB 1: 匯率計算機 -->
+    <section id="tab-exchange" class="space-y-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </span>
+            即時匯率換算
+          </h2>
+          <button onclick="fetchRates(true)" class="text-xs text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-md transition flex items-center gap-1">
+            <i class="fa-solid fa-rotate-right" id="refresh-icon"></i> 更新匯率
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+            <div class="flex justify-between text-xs text-slate-500 mb-1">
+              <span>外幣金額</span>
+              <span id="rate-timestamp" class="text-[10px] text-slate-400">使用最新匯率</span>
+            </div>
+            <div class="flex gap-2 items-center">
+              <select id="fx-currency" onchange="convertCurrency()" class="bg-white border border-slate-300 font-semibold text-slate-700 text-sm rounded-lg px-2.5 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="JPY">🇯🇵 JPY 日圓</option>
+                <option value="TWD">🇹🇼 TWD 新台幣</option>
+                <option value="KRW">🇰🇷 KRW 韓圓</option>
+                <option value="USD">🇺🇸 USD 美元</option>
+                <option value="EUR">🇪🇺 EUR 歐元</option>
+                <option value="THB">🇹🇭 THB 泰銖</option>
+                <option value="GBP">🇬🇧 GBP 英鎊</option>
+                <option value="CNY">🇨🇳 CNY 人民幣</option>
+              </select>
+              <input id="fx-foreign" type="number" inputmode="decimal" placeholder="0" oninput="convertCurrency()" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-right font-bold text-xl text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+
+          <div class="flex justify-center -my-1">
+            <div class="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs">
+              <i class="fa-solid fa-equals text-xs"></i>
+            </div>
+          </div>
+
+          <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100">
+            <div class="text-xs text-indigo-600 font-medium mb-1">折合港幣 (HKD)</div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-bold text-indigo-400">HK$</span>
+              <input id="fx-hkd" type="text" readonly value="0.00" class="w-full bg-transparent text-right font-black text-2xl text-indigo-700 outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100">
+          <p class="text-[11px] text-slate-400 mb-2">快速快捷鍵 (+金額)</p>
+          <div class="grid grid-cols-4 gap-1.5 text-xs">
+            <button onclick="addAmount(100)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg font-medium">+100</button>
+            <button onclick="addAmount(500)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg font-medium">+500</button>
+            <button onclick="addAmount(1000)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg font-medium">+1,000</button>
+            <button onclick="clearAmount()" class="bg-red-50 hover:bg-red-100 text-red-600 py-1.5 rounded-lg font-medium">歸零</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 每日行程 -->
+    <section id="tab-itinerary" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <h2 class="font-bold text-slate-800 text-base mb-3 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-plus"></i>
+          </span>
+          新增雲端行程活動 (全員同步)
+        </h2>
+        
+        <form id="itinerary-form" onsubmit="addItinerary(event)" class="space-y-2.5">
+          <div class="flex gap-2">
+            <select id="itin-day" class="w-1/3 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="Day 1">Day 1</option>
+              <option value="Day 2">Day 2</option>
+              <option value="Day 3">Day 3</option>
+              <option value="Day 4">Day 4</option>
+              <option value="Day 5">Day 5</option>
+              <option value="Day 6">Day 6</option>
+              <option value="Day 7">Day 7</option>
+            </select>
+            <input id="itin-time" type="time" class="w-2/3 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <input id="itin-title" type="text" placeholder="景點/餐廳/交通名稱 (例: 築地市場)" required class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input id="itin-note" type="text" placeholder="備註/地址/門票資訊 (選填)" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input id="itin-photo" type="url" placeholder="相片網址連結 (選填，可留空)" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500" />
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-cloud-arrow-up"></i> 同步加入雲端行程
+          </button>
+        </form>
+      </div>
+
+      <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1" id="day-filter-container"></div>
+      <div id="itinerary-list-container" class="space-y-2.5"></div>
+    </section>
+
+    <!-- TAB 3: 血拼名單 (支援圖片上傳與預覽) -->
+    <section id="tab-shopping" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <h2 class="font-bold text-slate-800 text-base mb-3 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-bag-shopping"></i>
+          </span>
+          新增雲端血拼項目 (支援圖片上傳)
+        </h2>
+
+        <form id="shopping-form" onsubmit="addShopItem(event)" class="space-y-3">
+          <div>
+            <input id="shop-title" type="text" placeholder="想買的物品/藥妝/伴手禮名稱..." required class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
+          <div class="flex gap-2">
+            <input id="shop-price" type="number" step="any" placeholder="預估外幣價格 (選填)" class="w-1/2 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+            <select id="shop-category" class="w-1/2 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="藥妝">💊 藥妝保健</option>
+              <option value="零食">🍫 零食伴手禮</option>
+              <option value="電器">🔌 電器數碼</option>
+              <option value="服飾">👕 服飾鞋包</option>
+              <option value="其他">📝 其他雜項</option>
+            </select>
+          </div>
+
+          <!-- 圖片上傳 (Direct File Upload) -->
+          <div class="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-3 text-center">
+            <label class="block text-xs font-semibold text-slate-600 mb-1 cursor-pointer">
+              <i class="fa-solid fa-cloud-arrow-up text-indigo-600 mr-1"></i> 選擇產品圖片上傳 (支援 JPG/PNG)
+            </label>
+            <input id="shop-image-file" type="file" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+            <input id="shop-photo" type="hidden" value="" />
+            <div id="shop-upload-preview" class="mt-2 hidden">
+              <img id="shop-preview-img" src="" alt="預覽" class="w-20 h-20 object-cover rounded-lg mx-auto border shadow-xs" />
+              <button type="button" onclick="clearShopImage()" class="text-[10px] text-red-500 mt-1 hover:underline">移除圖片</button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-cloud-arrow-up"></i> 同步新增至雲端購物單
+          </button>
+        </form>
+      </div>
+
+      <div class="flex gap-2 overflow-x-auto no-scrollbar py-0.5">
+        <button onclick="filterShopCategory('ALL')" id="shop-cat-ALL" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-xs whitespace-nowrap">全部</button>
+        <button onclick="filterShopCategory('藥妝')" id="shop-cat-藥妝" class="bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">💊 藥妝</button>
+        <button onclick="filterShopCategory('零食')" id="shop-cat-零食" class="bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🍫 零食</button>
+        <button onclick="filterShopCategory('電器')" id="shop-cat-電器" class="bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🔌 電器</button>
+        <button onclick="filterShopCategory('服飾')" id="shop-cat-服飾" class="bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">👕 服飾</button>
+      </div>
+
+      <div id="shopping-list-container" class="space-y-2.5"></div>
+    </section>
+
+    <!-- TAB 4: 門票車票 -->
+    <section id="tab-expenses" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <h2 class="font-bold text-slate-800 text-base mb-3 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-ticket"></i>
+          </span>
+          記錄門票及交通車票 (雲端同步)
+        </h2>
+
+        <form id="expense-form" onsubmit="addExpense(event)" class="space-y-2.5">
+          <div class="flex gap-2">
+            <input id="expense-title" type="text" placeholder="票券名稱 (例: 迪士尼門票)" required class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+            <select id="expense-cat" class="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-700 outline-none">
+              <option value="景點門票">🎟️ 景點門票</option>
+              <option value="交通車票">🚆 交通車票/Pass</option>
+              <option value="遊樂園">🎡 樂園門票</option>
+              <option value="展覽表演">🎭 展覽/表演</option>
+              <option value="其他票券">🎫 其他票券</option>
+            </select>
+          </div>
+
+          <div class="flex gap-2">
+            <input id="expense-amount" type="number" step="any" placeholder="外幣金額" required class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-4 rounded-lg transition whitespace-nowrap shadow-sm">
+              同步記錄
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-indigo-900 text-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
+        <div>
+          <p class="text-xs text-indigo-200">雲端門票與車票開支總額</p>
+          <p id="expense-total-hkd" class="text-2xl font-black">HK$ 0.00</p>
+        </div>
+        <button onclick="syncDataFromCloud()" class="bg-white/20 hover:bg-white/30 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-medium">
+          <i class="fa-solid fa-rotate"></i> 手動重新整理
+        </button>
+      </div>
+
+      <div id="expense-list" class="space-y-2"></div>
+    </section>
+
+    <!-- TAB 5: 天氣預報 (支援星標收藏預設城市) -->
+    <section id="tab-weather" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-location-dot"></i>
+            </span>
+            選擇目的地城市
+          </h2>
+          <div class="flex items-center gap-1">
+            <button onclick="toggleFavoriteCurrentCity()" id="btn-favorite-city" class="text-xs text-amber-500 hover:bg-amber-50 px-2 py-1 rounded-md transition flex items-center gap-1 font-medium border border-amber-200">
+              <i class="fa-regular fa-star" id="fav-star-icon"></i> <span id="fav-btn-text">設為預設</span>
+            </button>
+            <button onclick="fetchWeather(true)" class="text-xs text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-md transition flex items-center gap-1">
+              <i class="fa-solid fa-rotate-right" id="weather-refresh-icon"></i> 更新
+            </button>
+          </div>
+        </div>
+
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1 mb-3" id="city-pills-container"></div>
+
+        <form onsubmit="searchCityWeather(event)" class="flex gap-2">
+          <input id="weather-city-input" type="text" placeholder="搜尋全球城市 (例: 釜山 / London / 福岡)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3.5 rounded-lg font-medium transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+            <i class="fa-solid fa-magnifying-glass"></i> 搜尋
+          </button>
+        </form>
+      </div>
+
+      <div class="bg-gradient-to-br from-indigo-500 to-sky-600 text-white rounded-2xl p-4 shadow-md relative overflow-hidden">
+        <div class="flex justify-between items-start relative z-10">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h3 id="weather-city-name" class="font-bold text-lg">🇯🇵 東京</h3>
+              <i class="fa-solid fa-star text-amber-300 text-xs hidden" id="current-fav-badge" title="預設城市"></i>
+            </div>
+            <p id="weather-update-time" class="text-[11px] text-indigo-100 mt-0.5">載入中...</p>
+          </div>
+          <div id="weather-main-icon" class="text-4xl text-amber-300 drop-shadow">
+            <i class="fa-solid fa-sun"></i>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-baseline justify-between relative z-10">
+          <div>
+            <span id="weather-curr-temp" class="text-4xl font-black">--°C</span>
+            <span id="weather-curr-desc" class="text-xs font-semibold ml-2 px-2 py-0.5 bg-white/20 rounded-full">--</span>
+          </div>
+          <div class="text-right text-xs text-indigo-100 space-y-0.5">
+            <p>最高: <span id="weather-temp-max" class="font-semibold text-white">--°</span> / 最低: <span id="weather-temp-min" class="font-semibold text-white">--°</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-calendar-week text-indigo-500"></i> 未來 7 天預報
+        </h3>
+        <div id="weather-forecast-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- TAB 6: 旅行翻譯 -->
+    <section id="tab-translate" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+        <div class="flex justify-between items-center">
+          <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-language"></i>
+            </span>
+            即時翻譯助手
+          </h2>
+          <span class="text-[10px] bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">支援語音發音</span>
+        </div>
+
+        <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+          <select id="trans-source" class="w-1/2 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-lg p-2 outline-none">
+            <option value="zh-TW">🇹🇼 繁體中文</option>
+            <option value="en">🇺🇸 英文</option>
+            <option value="ja">🇯🇵 日文</option>
+            <option value="ko">🇰🇷 韓文</option>
+            <option value="th">🇹🇭 泰文</option>
+          </select>
+          <i class="fa-solid fa-arrow-right-long text-slate-400 text-xs"></i>
+          <select id="trans-target" class="w-1/2 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-lg p-2 outline-none">
+            <option value="ja">🇯🇵 日文</option>
+            <option value="ko">🇰🇷 韓文</option>
+            <option value="th">🇹🇭 泰文</option>
+            <option value="en">🇺🇸 英文</option>
+            <option value="zh-TW">🇹🇼 繁體中文</option>
+          </select>
+        </div>
+
+        <textarea id="trans-input" rows="3" placeholder="輸入想翻譯的文字或句子..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+
+        <button onclick="translateText()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 開始翻譯
+        </button>
+
+        <div id="trans-result-box" class="bg-indigo-50/70 rounded-xl p-3 border border-indigo-100 space-y-2 hidden">
+          <div class="flex justify-between items-start">
+            <span class="text-[10px] text-indigo-500 font-bold tracking-wide uppercase">翻譯結果</span>
+            <div class="flex gap-1.5">
+              <button onclick="speakTranslation()" class="bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 font-medium">
+                <i class="fa-solid fa-volume-high text-xs"></i> 朗讀
+              </button>
+              <button onclick="showBigCardFromTranslation()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 font-medium">
+                <i class="fa-solid fa-expand text-xs"></i> 放大示人
+              </button>
+            </div>
+          </div>
+          <p id="trans-result-text" class="font-bold text-indigo-950 text-base leading-snug break-words"></p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Config Google Sheets Modal -->
+  <div id="config-modal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4">
+    <div class="relative max-w-md w-full bg-white rounded-2xl p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+          <i class="fa-solid fa-cloud text-indigo-600"></i> 設定 Google Sheets 雲端同步
+        </h3>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+        <p>要讓多位用家同時填寫並即時互通資料，我們需透過免費的 <b>Google Apps Script 網頁應用程式 (Web App)</b> 作為後端橋樑連接 Google Sheet。</p>
+        
+        <div>
+          <label class="font-semibold text-slate-700 mb-1 block">Google Apps Script Web App 部署網址 (URL)</label>
+          <input id="script-url-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono text-[11px] text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 space-y-2">
+          <p class="font-bold"><i class="fa-solid fa-circle-info"></i> 正確部署步驟：</p>
+          <ol class="list-decimal pl-4 space-y-1">
+            <li>在 Google Sheet 點擊上方選單 <b>「擴充功能」 > 「Apps Script」</b>。</li>
+            <li>將下方的 Apps Script 完整程式碼貼入編輯器中並儲存。</li>
+            <li>點擊右上角藍色<b>「部署」</b> > <b>「新增部署作業」</b>。</li>
+            <li>類型選齒輪 ⚙️ > <b>「網頁應用程式」</b>。</li>
+            <li>「執行身分」選你自己，「誰可以存取」改選<b>「任何人 (Anyone)」</b>。</li>
+            <li>部署後複製網址貼上即可！</li>
+          </ol>
+        </div>
+
+        <div class="pt-1">
+          <button onclick="copyAppsScriptCode()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs py-2 rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-code"></i> 複製 Google Apps Script 完整後端程式碼
+          </button>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeConfigModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs py-2.5 rounded-xl transition">取消</button>
+        <button onclick="saveScriptUrl()" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2.5 rounded-xl transition shadow-sm">儲存並連線</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Code Holder for Copying -->
+  <textarea id="gas-code-text" class="hidden">
+// Google Apps Script 完整後端程式碼
+function doGet(e) {
+  var action = e.parameter.action;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  if (action === 'getData') {
+    var itineraries = getSheetDataAsJson(ss, 'Itineraries', ['id', 'day', 'time', 'title', 'note', 'photo']);
+    var shopping = getSheetDataAsJson(ss, 'Shopping', ['id', 'name', 'price', 'category', 'photo', 'done']);
+    var expenses = getSheetDataAsJson(ss, 'Expenses', ['id', 'title', 'cat', 'amount']);
+    
+    var output = ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      itineraries: itineraries,
+      shopping: shopping,
+      expenses: expenses
+    }));
+    output.setMimeType(ContentService.MimeType.JSON);
+    return output;
+  }
+  
+  var output = ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Invalid action' }));
+  output.setMimeType(ContentService.MimeType.JSON);
+  return output;
+}
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+  
+  try {
+    var postData = JSON.parse(e.postData.contents);
+    var action = postData.action;
+    var data = postData.data;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    if (action === 'saveItinerary') {
+      saveSheetData(ss, 'Itineraries', data, ['id', 'day', 'time', 'title', 'note', 'photo']);
+    } else if (action === 'saveShopping') {
+      saveSheetData(ss, 'Shopping', data, ['id', 'name', 'price', 'category', 'photo', 'done']);
+    } else if (action === 'saveExpenses') {
+      saveSheetData(ss, 'Expenses', data, ['id', 'title', 'cat', 'amount']);
+    }
+    
+    var output = ContentService.createTextOutput(JSON.stringify({ success: true }));
+    output.setMimeType(ContentService.MimeType.JSON);
+    return output;
+  } catch (err) {
+    var output = ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }));
+    output.setMimeType(ContentService.MimeType.JSON);
+    return output;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getSheetDataAsJson(ss, sheetName, keys) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  
+  var headers = rows[0];
+  var list = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = rows[i][j];
+    }
+    list.push(obj);
+  }
+  return list;
+}
+
+function saveSheetData(ss, sheetName, items, keys) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+  sheet.clear();
+  sheet.appendRow(keys);
+  
+  if (items && items.length > 0) {
+    var rows = items.map(function(item) {
+      return keys.map(function(key) {
+        return item[key] !== undefined ? item[key] : '';
+      });
+    });
+    sheet.getRange(2, 1, rows.length, keys.length).setValues(rows);
+  }
+}
+  </textarea>
+
+  <!-- Big Text Card Modal -->
+  <div id="big-card-modal" class="fixed inset-0 z-50 modal-backdrop hidden flex items-center justify-center p-4" onclick="closeBigCard()">
+    <div class="relative max-w-lg w-full bg-slate-900 text-white rounded-3xl p-6 shadow-2xl space-y-6 text-center border border-slate-700" onclick="event.stopPropagation()">
+      <button onclick="closeBigCard()" class="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-md">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+      <div class="pt-2">
+        <p id="big-card-subtitle" class="text-xs text-indigo-300 font-semibold tracking-wider uppercase mb-2">翻譯對照</p>
+        <p id="big-card-zh" class="text-sm text-slate-300 font-medium mb-6 px-4"></p>
+        <div class="bg-slate-800/90 rounded-2xl p-6 border border-slate-700 min-h-[160px] flex items-center justify-center">
+          <p id="big-card-target" class="text-3xl md:text-4xl font-extrabold text-amber-300 leading-snug break-words"></p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="speakBigCardText()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+          <i class="fa-solid fa-volume-high text-sm"></i> 語音播放
+        </button>
+        <button onclick="closeBigCard()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs px-5 py-3 rounded-xl transition">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-medium shadow-xl opacity-0 pointer-events-none transition-opacity duration-300 z-50 flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-message">完成</span>
+  </div>
+
+  <script>
+    let scriptUrl = localStorage.getItem('travel_script_url') || '';
+    let isCloudConnected = Boolean(scriptUrl);
+
+    let rates = JSON.parse(localStorage.getItem('travel_rates')) || {
+      JPY: 0.052, TWD: 0.24, KRW: 0.0058, USD: 7.82, EUR: 8.50, THB: 0.22, GBP: 9.90, CNY: 1.08
+    };
+
+    let itineraries = JSON.parse(localStorage.getItem('travel_itineraries')) || [];
+    let shoppingItems = JSON.parse(localStorage.getItem('travel_shopping')) || [];
+    let expenses = JSON.parse(localStorage.getItem('travel_expenses')) || [];
+
+    // Favorite/Saved City for Weather Forecast (Default to saved or Tokyo)
+    let defaultCity = JSON.parse(localStorage.getItem('travel_default_weather_city')) || { name: '🇯🇵 東京', lat: 35.6762, lon: 139.6503 };
+    let currentCity = { ...defaultCity };
+
+    let selectedDayFilter = 'ALL';
+    let selectedShopCategory = 'ALL';
+    let bigCardState = { zh: '', target: '', lang: 'ja' };
+    let currentTranslatedResult = '';
+
+    // Update Connection Badge UI
+    function updateConnectionStatus() {
+      const dot = document.getElementById('conn-dot');
+      const text = document.getElementById('network-text');
+      if (isCloudConnected) {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        text.innerText = "已連線雲端";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-amber-400";
+        text.innerText = "本地模式 (未設雲端)";
+      }
+    }
+
+    window.onload = function() {
+      updateConnectionStatus();
+
+      // 1) Restore active tab after refresh
+      const savedTab = localStorage.getItem('travel_active_tab') || 'exchange';
+      switchTab(savedTab, false);
+
+      renderItinerary();
+      renderShopping();
+      renderExpenses();
+      renderWeatherCityPills();
+      fetchWeather();
+
+      if (isCloudConnected) {
+        syncDataFromCloud();
+      }
+    };
+
+    async function syncDataFromCloud() {
+      if (!scriptUrl) return;
+      try {
+        showToast("正在同步雲端資料...", "info");
+        const response = await fetch(scriptUrl + "?action=getData");
+        const data = await response.json();
+        if (data && data.success) {
+          if (data.itineraries) itineraries = data.itineraries;
+          if (data.shopping) shoppingItems = data.shopping;
+          if (data.expenses) expenses = data.expenses;
+          
+          localStorage.setItem('travel_itineraries', JSON.stringify(itineraries));
+          localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
+          localStorage.setItem('travel_expenses', JSON.stringify(expenses));
+
+          renderItinerary();
+          renderShopping();
+          renderExpenses();
+          showToast("雲端資料同步成功！", "success");
+        }
+      } catch (err) {
+        console.error("Cloud sync failed:", err);
+        showToast("雲端同步失敗，使用本地數據", "error");
+      }
+    }
+
+    async function pushDataToCloud(actionType, payloadData) {
+      if (!scriptUrl) return;
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: actionType, data: payloadData })
+        });
+      } catch (err) {
+        console.error("Push to cloud failed:", err);
+      }
+    }
+
+    function openConfigModal() {
+      document.getElementById('script-url-input').value = scriptUrl;
+      document.getElementById('config-modal').classList.remove('hidden');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('config-modal').classList.add('hidden');
+    }
+
+    function saveScriptUrl() {
+      const url = document.getElementById('script-url-input').value.trim();
+      scriptUrl = url;
+      localStorage.setItem('travel_script_url', scriptUrl);
+      isCloudConnected = Boolean(scriptUrl);
+      updateConnectionStatus();
+      closeConfigModal();
+      if (isCloudConnected) {
+        syncDataFromCloud();
+      }
+      showToast("雲端設定已儲存！", "success");
+    }
+
+    function copyAppsScriptCode() {
+      const codeText = document.getElementById('gas-code-text').value;
+      const textarea = document.createElement('textarea');
+      textarea.value = codeText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast("已成功複製 Apps Script 程式碼！");
+    }
+
+    function switchTab(tabId, saveToStorage = true) {
+      const tabs = ['exchange', 'itinerary', 'shopping', 'expenses', 'weather', 'translate'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-btn-${t}`);
+        btn.classList.remove('border-white', 'text-white', 'font-semibold');
+        btn.classList.add('border-transparent', 'text-indigo-200');
+      });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      activeBtn.classList.remove('border-transparent', 'text-indigo-200');
+      activeBtn.classList.add('border-white', 'text-white', 'font-semibold');
+
+      if (saveToStorage) {
+        localStorage.setItem('travel_active_tab', tabId);
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').innerText = message;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    function convertCurrency() {
+      const curr = document.getElementById('fx-currency').value;
+      const val = parseFloat(document.getElementById('fx-foreign').value) || 0;
+      const rate = rates[curr] || 1;
+      const hkd = val * rate;
+      document.getElementById('fx-hkd').value = hkd.toFixed(2);
+    }
+
+    function addAmount(amount) {
+      const input = document.getElementById('fx-foreign');
+      const currVal = parseFloat(input.value) || 0;
+      input.value = currVal + amount;
+      convertCurrency();
+    }
+
+    function clearAmount() {
+      document.getElementById('fx-foreign').value = '';
+      convertCurrency();
+    }
+
+    async function fetchRates(isManual = false) {
+      try {
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/HKD');
+        const data = await res.json();
+        if (data && data.rates) {
+          rates.JPY = 1 / data.rates.JPY;
+          rates.TWD = 1 / data.rates.TWD;
+          rates.KRW = 1 / data.rates.KRW;
+          rates.USD = 1 / data.rates.USD;
+          rates.EUR = 1 / data.rates.EUR;
+          rates.THB = 1 / data.rates.THB;
+          rates.GBP = 1 / data.rates.GBP;
+          rates.CNY = 1 / data.rates.CNY;
+          localStorage.setItem('travel_rates', JSON.stringify(rates));
+          document.getElementById('rate-timestamp').innerText = "已更新最新匯率";
+          if (isManual) showToast("匯率更新成功！");
+        }
+      } catch (e) {
+        if (isManual) showToast("更新匯率失敗", "error");
+      }
+    }
+
+    function addItinerary(e) {
+      e.preventDefault();
+      const newItem = {
+        id: Date.now(),
+        day: document.getElementById('itin-day').value,
+        time: document.getElementById('itin-time').value || '09:00',
+        title: document.getElementById('itin-title').value,
+        note: document.getElementById('itin-note').value,
+        photo: document.getElementById('itin-photo').value
+      };
+      itineraries.push(newItem);
+      localStorage.setItem('travel_itineraries', JSON.stringify(itineraries));
+      pushDataToCloud('saveItinerary', itineraries);
+      
+      document.getElementById('itin-title').value = '';
+      document.getElementById('itin-note').value = '';
+      document.getElementById('itin-photo').value = '';
+      renderItinerary();
+      showToast("行程已同步加入雲端！");
+    }
+
+    function deleteItinerary(id) {
+      itineraries = itineraries.filter(i => i.id !== id);
+      localStorage.setItem('travel_itineraries', JSON.stringify(itineraries));
+      pushDataToCloud('saveItinerary', itineraries);
+      renderItinerary();
+      showToast("行程已刪除");
+    }
+
+    function renderItinerary() {
+      const container = document.getElementById('itinerary-list-container');
+      const filterContainer = document.getElementById('day-filter-container');
+      
+      const days = ['ALL', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'];
+      filterContainer.innerHTML = days.map(d => `
+        <button onclick="filterItinDay('${d}')" class="${selectedDayFilter === d ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition">
+          ${d === 'ALL' ? '全部天數' : d}
+        </button>
+      `).join('');
+
+      const filtered = selectedDayFilter === 'ALL' ? itineraries : itineraries.filter(i => i.day === selectedDayFilter);
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs">此天數尚無行程記錄</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-100 flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3">
+            <div class="bg-indigo-50 text-indigo-600 font-bold text-[10px] px-2 py-1 rounded-lg text-center min-w-[48px]">
+              <div>${item.day}</div>
+              <div class="text-xs">${item.time}</div>
+            </div>
+            <div class="space-y-0.5">
+              <h4 class="font-bold text-slate-800 text-xs">${item.title}</h4>
+              ${item.note ? `<p class="text-[11px] text-slate-500">${item.note}</p>` : ''}
+              ${item.photo ? `<a href="${item.photo}" target="_blank" class="text-[10px] text-indigo-600 hover:underline block"><i class="fa-solid fa-image"></i> 查看附加圖片</a>` : ''}
+            </div>
+          </div>
+          <button onclick="deleteItinerary(${item.id})" class="text-slate-300 hover:text-red-500 p-1 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      `).join('');
+    }
+
+    function filterItinDay(day) {
+      selectedDayFilter = day;
+      renderItinerary();
+    }
+
+    function handleImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const base64Str = event.target.result;
+        document.getElementById('shop-photo').value = base64Str;
+        document.getElementById('shop-preview-img').src = base64Str;
+        document.getElementById('shop-upload-preview').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearShopImage() {
+      document.getElementById('shop-photo').value = '';
+      document.getElementById('shop-image-file').value = '';
+      document.getElementById('shop-upload-preview').classList.add('hidden');
+    }
+
+    function addShopItem(e) {
+      e.preventDefault();
+      const newItem = {
+        id: Date.now(),
+        name: document.getElementById('shop-title').value,
+        price: document.getElementById('shop-price').value,
+        category: document.getElementById('shop-category').value,
+        photo: document.getElementById('shop-photo').value,
+        done: false
+      };
+      shoppingItems.push(newItem);
+      localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
+      pushDataToCloud('saveShopping', shoppingItems);
+
+      document.getElementById('shop-title').value = '';
+      document.getElementById('shop-price').value = '';
+      clearShopImage();
+      renderShopping();
+      showToast("血拼清單已同步加入！");
+    }
+
+    function toggleShopDone(id) {
+      const item = shoppingItems.find(s => s.id === id);
+      if (item) {
+        item.done = !item.done;
+        localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
+        pushDataToCloud('saveShopping', shoppingItems);
+        renderShopping();
+      }
+    }
+
+    function deleteShopItem(id) {
+      shoppingItems = shoppingItems.filter(s => s.id !== id);
+      localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
+      pushDataToCloud('saveShopping', shoppingItems);
+      renderShopping();
+    }
+
+    function renderShopping() {
+      const container = document.getElementById('shopping-list-container');
+      const filtered = selectedShopCategory === 'ALL' ? shoppingItems : shoppingItems.filter(s => s.category === selectedShopCategory);
+
+      ['ALL', '藥妝', '零食', '電器', '服飾'].forEach(cat => {
+        const btn = document.getElementById(`shop-cat-${cat}`);
+        if (btn) {
+          if (selectedShopCategory === cat) {
+            btn.className = "bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-xs whitespace-nowrap";
+          } else {
+            btn.className = "bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap";
+          }
+        }
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs">此分類尚無購物項目</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <div class="bg-white rounded-xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <input type="checkbox" ${item.done ? 'checked' : ''} onclick="toggleShopDone(${item.id})" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" />
+            <div class="flex items-center gap-3">
+              ${item.photo ? `<img src="${item.photo}" class="w-12 h-12 object-cover rounded-lg border shadow-xs flex-shrink-0" alt="item" />` : ''}
+              <div>
+                <h4 class="font-bold text-xs ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}">${item.name}</h4>
+                <p class="text-[10px] text-slate-400">${item.category} ${item.price ? '· 數量/備註: ' + item.price : ''}</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+              <button onclick="adjustShopAmount(${item.id}, -1)" class="w-6 h-6 bg-white hover:bg-slate-200 rounded text-slate-700 text-[10px] font-bold flex items-center justify-center shadow-xs transition" title="減少">-</button>
+              <button onclick="adjustShopAmount(${item.id}, 1)" class="w-6 h-6 bg-white hover:bg-slate-200 rounded text-slate-700 text-[10px] font-bold flex items-center justify-center shadow-xs transition" title="增加">+</button>
+            </div>
+            <button onclick="deleteShopItem(${item.id})" class="text-slate-300 hover:text-red-500 p-1 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterShopCategory(cat) {
+      selectedShopCategory = cat;
+      renderShopping();
+    }
+
+    function adjustShopAmount(id, delta) {
+      const item = shoppingItems.find(s => s.id === id);
+      if (item) {
+        let currentNum = parseFloat(item.price);
+        if (isNaN(currentNum)) {
+          currentNum = 1;
+        }
+        let newNum = Math.max(1, currentNum + delta);
+        item.price = newNum.toString();
+        localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
+        pushDataToCloud('saveShopping', shoppingItems);
+        renderShopping();
+      }
+    }
+
+    function addExpense(e) {
+      e.preventDefault();
+      const newExp = {
+        id: Date.now(),
+        title: document.getElementById('expense-title').value,
+        cat: document.getElementById('expense-cat').value,
+        amount: parseFloat(document.getElementById('expense-amount').value) || 0
+      };
+      expenses.push(newExp);
+      localStorage.setItem('travel_expenses', JSON.stringify(expenses));
+      pushDataToCloud('saveExpenses', expenses);
+
+      document.getElementById('expense-title').value = '';
+      document.getElementById('expense-amount').value = '';
+      renderExpenses();
+      showToast("票券開支已同步！");
+    }
+
+    // 調整票券金額 (+/-)
+    function adjustExpenseAmount(id, delta) {
+      const item = expenses.find(e => e.id === id);
+      if (item) {
+        item.amount = Math.max(0, parseFloat((item.amount + delta).toFixed(2)));
+        localStorage.setItem('travel_expenses', JSON.stringify(expenses));
+        pushDataToCloud('saveExpenses', expenses);
+        renderExpenses();
+      }
+    }
+
+    function deleteExpense(id) {
+      expenses = expenses.filter(e => e.id !== id);
+      localStorage.setItem('travel_expenses', JSON.stringify(expenses));
+      pushDataToCloud('saveExpenses', expenses);
+      renderExpenses();
+    }
+
+    function renderExpenses() {
+      const container = document.getElementById('expense-list');
+      let total = expenses.reduce((sum, item) => sum + item.amount, 0);
+      document.getElementById('expense-total-hkd').innerText = `HK$ ${total.toFixed(2)}`;
+
+      if (expenses.length === 0) {
+        container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs">尚未記錄門票或車票</div>`;
+        return;
+      }
+
+      container.innerHTML = expenses.map(item => `
+        <div class="bg-white rounded-xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-2">
+          <div>
+            <h4 class="font-bold text-xs text-slate-800">${item.title}</h4>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">${item.cat}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+              <button onclick="adjustExpenseAmount(${item.id}, -10)" class="w-6 h-6 bg-white hover:bg-slate-200 rounded text-slate-700 text-[10px] font-bold flex items-center justify-center shadow-xs transition" title="減 10">-</button>
+              <span class="font-black text-xs text-indigo-600 px-2 min-w-[40px] text-center">${item.amount}</span>
+              <button onclick="adjustExpenseAmount(${item.id}, 10)" class="w-6 h-6 bg-white hover:bg-slate-200 rounded text-slate-700 text-[10px] font-bold flex items-center justify-center shadow-xs transition" title="加 10">+</button>
+            </div>
+            <button onclick="deleteExpense(${item.id})" class="text-slate-300 hover:text-red-500 text-xs p-1"><i class="fa-solid fa-trash-can"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    const presetCities = [
+      { name: '🇯🇵 東京', lat: 35.6762, lon: 139.6503 },
+      { name: '🇯🇵 大阪', lat: 34.6937, lon: 135.5023 },
+      { name: '🇰🇷 釜山', lat: 35.1796, lon: 129.0756 },
+      { name: '🇹🇼 台北', lat: 25.0330, lon: 121.5654 },
+      { name: '🇰🇷 首爾', lat: 37.5665, lon: 126.9780 },
+      { name: '🇹🇭 曼谷', lat: 13.7563, lon: 100.5018 },
+      { name: '🇬🇧 倫敦', lat: 51.5074, lon: -0.1278 }
+    ];
+
+    function renderWeatherCityPills() {
+      const container = document.getElementById('city-pills-container');
+      container.innerHTML = presetCities.map(c => `
+        <button onclick="selectCityWeather('${c.name}', ${c.lat}, ${c.lon})" class="${currentCity.name === c.name ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition">
+          ${c.name}
+        </button>
+      `).join('');
+
+      updateFavoriteButtonState();
+    }
+
+    function selectCityWeather(name, lat, lon) {
+      currentCity = { name, lat, lon };
+      renderWeatherCityPills();
+      fetchWeather();
+    }
+
+    function toggleFavoriteCurrentCity() {
+      defaultCity = { ...currentCity };
+      localStorage.setItem('travel_default_weather_city', JSON.stringify(defaultCity));
+      updateFavoriteButtonState();
+      showToast(`已將 ${currentCity.name} 設為預設天氣城市！`);
+    }
+
+    function updateFavoriteButtonState() {
+      const isFav = defaultCity.name === currentCity.name;
+      const starIcon = document.getElementById('fav-star-icon');
+      const favText = document.getElementById('fav-btn-text');
+      const badge = document.getElementById('current-fav-badge');
+
+      if (isFav) {
+        starIcon.className = "fa-solid fa-star text-amber-500";
+        favText.innerText = "已設為預設";
+        badge.classList.remove('hidden');
+      } else {
+        starIcon.className = "fa-regular fa-star text-amber-500";
+        favText.innerText = "設為預設";
+        badge.classList.add('hidden');
+      }
+    }
+
+    async function fetchWeather() {
+      try {
+        document.getElementById('weather-city-name').innerText = currentCity.name;
+        document.getElementById('weather-update-time').innerText = "載入中...";
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${currentCity.lat}&longitude=${currentCity.lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.current_weather) {
+          document.getElementById('weather-curr-temp').innerText = `${Math.round(data.current_weather.temperature)}°C`;
+          document.getElementById('weather-curr-desc').innerText = getWeatherDesc(data.current_weather.weathercode);
+          document.getElementById('weather-temp-max').innerText = `${Math.round(data.daily.temperature_2m_max[0])}°`;
+          document.getElementById('weather-temp-min').innerText = `${Math.round(data.daily.temperature_2m_min[0])}°`;
+          document.getElementById('weather-update-time').innerText = "剛剛更新";
+
+          const forecastContainer = document.getElementById('weather-forecast-list');
+          let forecastHTML = '';
+          for (let i = 1; i < 7; i++) {
+            const dateStr = data.daily.time[i];
+            const maxT = Math.round(data.daily.temperature_2m_max[i]);
+            const minT = Math.round(data.daily.temperature_2m_min[i]);
+            forecastHTML += `
+              <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl text-xs">
+                <span class="font-medium text-slate-600">${dateStr}</span>
+                <span class="text-slate-500">${getWeatherDesc(data.daily.weathercode[i])}</span>
+                <span class="font-bold text-slate-800">${maxT}° / ${minT}°</span>
+              </div>
+            `;
+          }
+          forecastContainer.innerHTML = forecastHTML;
+        }
+      } catch (e) {
+        document.getElementById('weather-update-time').innerText = "載入失敗";
+      }
+    }
+
+    async function searchCityWeather(e) {
+      e.preventDefault();
+      const query = document.getElementById('weather-city-input').value.trim();
+      if (!query) return;
+      try {
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1`);
+        const geoData = await geoRes.json();
+        if (geoData && geoData.results && geoData.results.length > 0) {
+          const loc = geoData.results[0];
+          currentCity = { name: `${loc.country_code ? loc.country_code + ' ' : ''}${loc.name}`, lat: loc.latitude, lon: loc.longitude };
+          fetchWeather();
+          renderWeatherCityPills();
+          showToast(`已切換至 ${loc.name}`);
+        } else {
+          showToast("找不到該城市", "error");
+        }
+      } catch (err) {
+        showToast("搜尋城市失敗", "error");
+      }
+    }
+
+    function getWeatherDesc(code) {
+      const map = { 0: '晴朗 ☀️', 1: '多雲 🌤️', 2: '多雲 ⛅', 3: '陰天 ☁️', 51: '小雨 🌧️', 61: '降雨 🌧️', 71: '降雪 ❄️', 95: '雷雨 ⚡' };
+      return map[code] || '晴時多雲';
+    }
+
+    async function translateText() {
+      const text = document.getElementById('trans-input').value.trim();
+      const source = document.getElementById('trans-source').value;
+      const target = document.getElementById('trans-target').value;
+      if (!text) return;
+
+      try {
+        showToast("正在翻譯...", "info");
+        const prompt = `Translate the following text from ${source} to ${target}. Output ONLY the translated text without explanations: "${text}"`;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const resJson = await response.json();
+        const translated = resJson.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "翻譯失敗";
+        currentTranslatedResult = translated;
+        document.getElementById('trans-result-text').innerText = translated;
+        document.getElementById('trans-result-box').classList.remove('hidden');
+        showToast("翻譯完成！");
+      } catch (err) {
+        showToast("翻譯發生錯誤", "error");
+      }
+    }
+
+    function speakTranslation() {
+      if (!currentTranslatedResult) return;
+      const utterance = new SpeechSynthesisUtterance(currentTranslatedResult);
+      utterance.lang = document.getElementById('trans-target').value;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function showBigCardFromTranslation() {
+      const zhText = document.getElementById('trans-input').value.trim();
+      bigCardState = { zh: zhText, target: currentTranslatedResult, lang: document.getElementById('trans-target').value };
+      document.getElementById('big-card-zh').innerText = zhText;
+      document.getElementById('big-card-target').innerText = currentTranslatedResult;
+      document.getElementById('big-card-modal').classList.remove('hidden');
+    }
+
+    function closeBigCard() {
+      document.getElementById('big-card-modal').classList.add('hidden');
+    }
+
+    function speakBigCardText() {
+      if (!bigCardState.target) return;
+      const utterance = new SpeechSynthesisUtterance(bigCardState.target);
+      utterance.lang = bigCardState.lang;
+      window.speechSynthesis.speak(utterance);
+    }
+  </script>
+</body>
+</html>
