@@ -209,7 +209,18 @@
 
           <input id="itin-title" type="text" placeholder="景點/餐廳/交通名稱 (例: 築地市場)" required class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
           <input id="itin-note" type="text" placeholder="備註/地址/門票資訊 (選填)" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input id="itin-photo" type="url" placeholder="相片網址連結 (選填，可留空)" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500" />
+          
+          <div class="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-3 text-center">
+            <label class="block text-xs font-semibold text-slate-600 mb-1 cursor-pointer">
+              <i class="fa-solid fa-image text-indigo-600 mr-1"></i> 加入圖片 (支援 JPG/PNG 上傳)
+            </label>
+            <input id="itin-image-file" type="file" accept="image/*" onchange="handleItinImageUpload(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+            <input id="itin-photo" type="hidden" value="" />
+            <div id="itin-upload-preview" class="mt-2 hidden">
+              <img id="itin-preview-img" src="" alt="預覽" class="w-20 h-20 object-cover rounded-lg mx-auto border shadow-xs" />
+              <button type="button" onclick="clearItinImage()" class="text-[10px] text-red-500 mt-1 hover:underline">移除圖片</button>
+            </div>
+          </div>
 
           <div class="flex gap-2">
             <button type="submit" id="itin-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
@@ -253,7 +264,10 @@
             </select>
           </div>
 
-          <!-- 圖片上傳 -->
+          <div>
+            <input id="shop-link" type="url" placeholder="加入連結 (官方網站/網購/地圖網址，選填)" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+
           <div class="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-3 text-center">
             <label class="block text-xs font-semibold text-slate-600 mb-1 cursor-pointer">
               <i class="fa-solid fa-cloud-arrow-up text-indigo-600 mr-1"></i> 選擇產品圖片上傳 (支援 JPG/PNG)
@@ -581,7 +595,7 @@
       </div>
 
       <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
-        <p>要讓多位用家同時填寫並即時互通資料（包括血拼圖片），我們需透過免費的 <b>Google Apps Script 網頁應用程式 (Web App)</b> 作為後端橋樑連接 Google Sheet。</p>
+        <p>要讓多位用家同時填寫並即時互通資料（包括圖片與連結），我們需透過免費的 <b>Google Apps Script 網頁應用程式 (Web App)</b> 作為後端橋樑連接 Google Sheet。</p>
         
         <div>
           <label class="font-semibold text-slate-700 mb-1 block">Google Apps Script Web App 部署網址 (URL)</label>
@@ -596,7 +610,7 @@
             <li>點擊右上角藍色<b>「部署」</b> > <b>「新增部署作業」</b>。</li>
             <li>類型選齒輪 ⚙️ > <b>「網頁應用程式」</b>。</li>
             <li>「執行身分」選你自己，「誰可以存取」改選<b>「任何人 (Anyone)」</b>。</li>
-            <li>部署後複製網址貼上即可！血拼相片將會以 Base64 或圖檔網址安全同步存入試算表。</li>
+            <li>部署後複製網址貼上即可！相片與連結將會安全同步存入試算表。</li>
           </ol>
         </div>
 
@@ -614,16 +628,15 @@
     </div>
   </div>
 
-  <!-- Hidden Code Holder for Copying -->
   <textarea id="gas-code-text" class="hidden">
-// Google Apps Script 完整後端程式碼 (支援圖片與各項同步)
+// Google Apps Script 完整後端程式碼 (支援圖片、連結與各項同步)
 function doGet(e) {
   var action = e.parameter.action;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
   if (action === 'getData') {
     var itineraries = getSheetDataAsJson(ss, 'Itineraries', ['id', 'day', 'time', 'title', 'note', 'photo']);
-    var shopping = getSheetDataAsJson(ss, 'Shopping', ['id', 'name', 'price', 'category', 'photo', 'done']);
+    var shopping = getSheetDataAsJson(ss, 'Shopping', ['id', 'name', 'price', 'category', 'link', 'photo', 'done']);
     var expenses = getSheetDataAsJson(ss, 'Expenses', ['id', 'title', 'cat', 'amount']);
     
     var output = ContentService.createTextOutput(JSON.stringify({
@@ -654,7 +667,7 @@ function doPost(e) {
     if (action === 'saveItinerary') {
       saveSheetData(ss, 'Itineraries', data, ['id', 'day', 'time', 'title', 'note', 'photo']);
     } else if (action === 'saveShopping') {
-      saveSheetData(ss, 'Shopping', data, ['id', 'name', 'price', 'category', 'photo', 'done']);
+      saveSheetData(ss, 'Shopping', data, ['id', 'name', 'price', 'category', 'link', 'photo', 'done']);
     } else if (action === 'saveExpenses') {
       saveSheetData(ss, 'Expenses', data, ['id', 'title', 'cat', 'amount']);
     }
@@ -827,7 +840,6 @@ function saveSheetData(ss, sheetName, items, keys) {
       }
     };
 
-    // Cloud Synchronization Helper
     async function syncDataFromCloud() {
       if (!scriptUrl) return;
       try {
@@ -1090,7 +1102,6 @@ function saveSheetData(ss, sheetName, items, keys) {
       const checkin = document.getElementById('hotel-checkin').value;
       const checkout = document.getElementById('hotel-checkout').value;
 
-      // RULE: CHECK OUT日期唔可以早過入住日期
       if (checkin && checkout && checkout < checkin) {
         showToast("錯誤：退房日期 (Check-out) 不可以早過入住日期！", "error");
         return;
@@ -1200,21 +1211,12 @@ function saveSheetData(ss, sheetName, items, keys) {
       const retDep = document.getElementById('flight-ret-dep').value;
       const retArr = document.getElementById('flight-ret-arr').value;
 
-      // RULE: 去程抵達時間唔可以早過去程出發時間
       if (outDep && outArr && outArr < outDep) {
-        showToast("錯誤：去程到達時間唔可以早過去程出發時間！", "error");
+        showToast("錯誤：去程到達時間不可以早於去程出發時間！", "error");
         return;
       }
-
-      // RULE: 回程日期唔可以早過出發日期 (若填寫了回程出發及去程出發)
-      if (outDep && retDep && retDep < outDep) {
-        showToast("錯誤：回程出發日期唔可以早過去程出發日期！", "error");
-        return;
-      }
-
-      // RULE: 回程抵達時間唔可以早過回程出發時間
       if (retDep && retArr && retArr < retDep) {
-        showToast("錯誤：回程到達時間唔可以早過回程出發時間！", "error");
+        showToast("錯誤：回程到達時間不可以早於回程出發時間！", "error");
         return;
       }
 
@@ -1231,10 +1233,10 @@ function saveSheetData(ss, sheetName, items, keys) {
 
       if (editId) {
         flights = flights.map(f => f.id == editId ? data : f);
-        showToast("機票資料已更新！");
+        showToast("機票航班已更新！");
       } else {
         flights.push(data);
-        showToast("機票資料已新增！");
+        showToast("機票航班已新增！");
       }
 
       localStorage.setItem('travel_flights', JSON.stringify(flights));
@@ -1246,7 +1248,7 @@ function saveSheetData(ss, sheetName, items, keys) {
       flights = flights.filter(f => f.id !== id);
       localStorage.setItem('travel_flights', JSON.stringify(flights));
       renderFlights();
-      showToast("機票已刪除");
+      showToast("機票航班已刪除");
     }
 
     function renderFlights() {
@@ -1259,15 +1261,15 @@ function saveSheetData(ss, sheetName, items, keys) {
       container.innerHTML = flights.map(f => `
         <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 space-y-2">
           <div class="flex justify-between items-start">
-            <h4 class="font-bold text-xs text-slate-800"><i class="fa-solid fa-plane-departure text-indigo-600 mr-1"></i> ${f.airline}</h4>
+            <h4 class="font-bold text-xs text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-plane-circle-check text-indigo-600"></i> ${f.airline}</h4>
             <div class="flex items-center gap-1">
               <button onclick="openFlightModal(${f.id})" class="text-slate-400 hover:text-indigo-600 p-1 text-xs"><i class="fa-solid fa-pen"></i></button>
               <button onclick="deleteFlight(${f.id})" class="text-slate-400 hover:text-red-500 p-1 text-xs"><i class="fa-solid fa-trash-can"></i></button>
             </div>
           </div>
-          <div class="space-y-1 bg-white p-2 rounded-lg border border-slate-100 text-[11px] text-slate-600">
-            <div><b class="text-indigo-700">去程:</b> ${f.outDep ? f.outDep.replace('T', ' ') : '未定'} ➔ ${f.outArr ? f.outArr.replace('T', ' ') : '未定'}</div>
-            <div><b class="text-indigo-700">回程:</b> ${f.retDep ? f.retDep.replace('T', ' ') : '未定'} ➔ ${f.retArr ? f.retArr.replace('T', ' ') : '未定'}</div>
+          <div class="space-y-1 text-[11px] bg-white p-2.5 rounded-lg border border-slate-100 text-slate-600">
+            <div><b class="text-indigo-600">去程:</b> ${f.outDep ? f.outDep.replace('T', ' ') : '未定'} ➔ ${f.outArr ? f.outArr.replace('T', ' ') : '未定'}</div>
+            ${f.retDep || f.retArr ? `<div><b class="text-indigo-600">回程:</b> ${f.retDep ? f.retDep.replace('T', ' ') : '未定'} ➔ ${f.retArr ? f.retArr.replace('T', ' ') : '未定'}</div>` : ''}
           </div>
           <div class="flex justify-between items-center text-[11px]">
             <span class="font-bold text-indigo-600">${f.price || ''}</span>
@@ -1277,147 +1279,45 @@ function saveSheetData(ss, sheetName, items, keys) {
       `).join('');
     }
 
-    // Config Modal
-    function openConfigModal() {
-      document.getElementById('script-url-input').value = scriptUrl;
-      document.getElementById('config-modal').classList.remove('hidden');
-    }
-
-    function closeConfigModal() {
-      document.getElementById('config-modal').classList.add('hidden');
-    }
-
-    function saveScriptUrl() {
-      const url = document.getElementById('script-url-input').value.trim();
-      scriptUrl = url;
-      localStorage.setItem('travel_script_url', scriptUrl);
-      isCloudConnected = Boolean(scriptUrl);
-      updateConnectionStatus();
-      closeConfigModal();
-      if (isCloudConnected) {
-        syncDataFromCloud();
-      }
-      showToast("雲端設定已儲存！", "success");
-    }
-
-    function copyAppsScriptCode() {
-      const codeText = document.getElementById('gas-code-text').value;
-      const textarea = document.createElement('textarea');
-      textarea.value = codeText;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      showToast("已成功複製 Apps Script 程式碼！");
-    }
-
-    function switchTab(tabId, saveToStorage = true) {
-      const tabs = ['exchange', 'bookings', 'itinerary', 'shopping', 'expenses', 'weather', 'translate'];
-      tabs.forEach(t => {
-        const tabEl = document.getElementById(`tab-${t}`);
-        const btnEl = document.getElementById(`tab-btn-${t}`);
-        if (tabEl) tabEl.classList.add('hidden');
-        if (btnEl) {
-          btnEl.classList.remove('border-white', 'text-white', 'font-semibold');
-          btnEl.classList.add('border-transparent', 'text-indigo-200');
-        }
-      });
-      const activeTabEl = document.getElementById(`tab-${tabId}`);
-      const activeBtnEl = document.getElementById(`tab-btn-${tabId}`);
-      if (activeTabEl) activeTabEl.classList.remove('hidden');
-      if (activeBtnEl) {
-        activeBtnEl.classList.remove('border-transparent', 'text-indigo-200');
-        activeBtnEl.classList.add('border-white', 'text-white', 'font-semibold');
-      }
-
-      if (saveToStorage) {
-        localStorage.setItem('travel_active_tab', tabId);
-      }
-    }
-
-    function showToast(message, type = 'success') {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-message').innerText = message;
-      toast.classList.remove('opacity-0');
-      setTimeout(() => {
-        toast.classList.add('opacity-0');
-      }, 3000);
-    }
-
-    function convertCurrency() {
-      const curr = document.getElementById('fx-currency').value;
-      const val = parseFloat(document.getElementById('fx-foreign').value) || 0;
-      const rate = rates[curr] || 1;
-      const hkd = val * rate;
-      document.getElementById('fx-hkd').value = hkd.toFixed(2);
-    }
-
-    function addAmount(amount) {
-      const input = document.getElementById('fx-foreign');
-      const currVal = parseFloat(input.value) || 0;
-      input.value = currVal + amount;
-      convertCurrency();
-    }
-
-    function clearAmount() {
-      document.getElementById('fx-foreign').value = '';
-      convertCurrency();
-    }
-
-    async function fetchRates(isManual = false) {
-      try {
-        const res = await fetch('https://api.exchangerate-api.com/v4/latest/HKD');
-        const data = await res.json();
-        if (data && data.rates) {
-          rates.JPY = 1 / data.rates.JPY;
-          rates.TWD = 1 / data.rates.TWD;
-          rates.KRW = 1 / data.rates.KRW;
-          rates.USD = 1 / data.rates.USD;
-          rates.EUR = 1 / data.rates.EUR;
-          rates.THB = 1 / data.rates.THB;
-          rates.GBP = 1 / data.rates.GBP;
-          rates.CNY = 1 / data.rates.CNY;
-          localStorage.setItem('travel_rates', JSON.stringify(rates));
-          document.getElementById('rate-timestamp').innerText = "已更新最新匯率";
-          if (isManual) showToast("匯率更新成功！");
-        }
-      } catch (e) {
-        if (isManual) showToast("更新匯率失敗", "error");
-      }
-    }
-
     // Itinerary Functions
+    function handleItinImageUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('itin-photo').value = evt.target.result;
+        document.getElementById('itin-preview-img').src = evt.target.result;
+        document.getElementById('itin-upload-preview').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearItinImage() {
+      document.getElementById('itin-photo').value = '';
+      document.getElementById('itin-image-file').value = '';
+      document.getElementById('itin-upload-preview').classList.add('hidden');
+    }
+
     function handleItinerarySubmit(e) {
       e.preventDefault();
       const editId = document.getElementById('itin-edit-id').value;
-      const rawTimeInput = document.getElementById('itin-time').value;
-      const cleanTime = sanitizeTime(rawTimeInput);
-      const day = document.getElementById('itin-day').value;
-      const title = document.getElementById('itin-title').value;
-      const note = document.getElementById('itin-note').value;
-      const photo = document.getElementById('itin-photo').value;
+      const rawTime = document.getElementById('itin-time').value;
+
+      const data = {
+        id: editId ? Number(editId) : Date.now(),
+        day: document.getElementById('itin-day').value,
+        time: sanitizeTime(rawTime),
+        title: document.getElementById('itin-title').value,
+        note: document.getElementById('itin-note').value,
+        photo: document.getElementById('itin-photo').value || ''
+      };
 
       if (editId) {
-        const item = itineraries.find(i => i.id == editId);
-        if (item) {
-          item.day = day;
-          item.time = cleanTime;
-          item.title = title;
-          item.note = note;
-          item.photo = photo;
-        }
+        itineraries = itineraries.map(i => i.id == editId ? data : i);
         showToast("行程已更新並同步雲端！");
       } else {
-        const newItem = {
-          id: Date.now(),
-          day: day,
-          time: cleanTime,
-          title: title,
-          note: note,
-          photo: photo
-        };
-        itineraries.push(newItem);
-        showToast("行程已同步加入雲端！");
+        itineraries.push(data);
+        showToast("行程已新增並同步雲端！");
       }
 
       localStorage.setItem('travel_itineraries', JSON.stringify(itineraries));
@@ -1429,28 +1329,33 @@ function saveSheetData(ss, sheetName, items, keys) {
     function editItinerary(id) {
       const item = itineraries.find(i => i.id == id);
       if (!item) return;
+
       document.getElementById('itin-edit-id').value = item.id;
-      document.getElementById('itin-day').value = item.day;
-      document.getElementById('itin-time').value = (item.time && item.time !== '--:--') ? item.time : '';
-      document.getElementById('itin-title').value = item.title;
+      document.getElementById('itin-day').value = item.day || 'Day 1';
+      document.getElementById('itin-time').value = item.time !== '--:--' ? item.time : '';
+      document.getElementById('itin-title').value = item.title || '';
       document.getElementById('itin-note').value = item.note || '';
       document.getElementById('itin-photo').value = item.photo || '';
 
-      document.getElementById('itin-form-heading').innerText = "編輯雲端行程活動";
-      document.getElementById('itin-form-icon').className = "fa-solid fa-pen-to-square";
-      document.getElementById('itin-submit-btn').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 儲存修改`;
+      if (item.photo) {
+        document.getElementById('itin-preview-img').src = item.photo;
+        document.getElementById('itin-upload-preview').classList.remove('hidden');
+      } else {
+        clearItinImage();
+      }
+
+      document.getElementById('itin-form-heading').innerText = "編輯行程活動";
+      document.getElementById('itin-form-icon').className = "fa-solid fa-pen";
+      document.getElementById('itin-submit-btn').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 更新雲端行程`;
       document.getElementById('itin-cancel-btn').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function cancelItineraryEdit() {
+      document.getElementById('itinerary-form').reset();
       document.getElementById('itin-edit-id').value = '';
-      document.getElementById('itin-day').value = 'Day 1';
-      document.getElementById('itin-time').value = '';
-      document.getElementById('itin-title').value = '';
-      document.getElementById('itin-note').value = '';
       document.getElementById('itin-photo').value = '';
-
+      clearItinImage();
       document.getElementById('itin-form-heading').innerText = "新增雲端行程活動 (全員同步)";
       document.getElementById('itin-form-icon').className = "fa-solid fa-plus";
       document.getElementById('itin-submit-btn').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 同步加入雲端行程`;
@@ -1465,59 +1370,66 @@ function saveSheetData(ss, sheetName, items, keys) {
       showToast("行程已刪除");
     }
 
-    function renderItinerary() {
-      const container = document.getElementById('itinerary-list-container');
-      const filterContainer = document.getElementById('day-filter-container');
-      if (!container || !filterContainer) return;
-      
-      const days = ['ALL', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'];
-      filterContainer.innerHTML = days.map(d => `
-        <button onclick="filterItinDay('${d}')" class="${selectedDayFilter === d ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition">
-          ${d === 'ALL' ? '全部天數' : d}
-        </button>
-      `).join('');
-
-      const filtered = selectedDayFilter === 'ALL' ? itineraries : itineraries.filter(i => i.day === selectedDayFilter);
-      if (filtered.length === 0) {
-        container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs">此天數尚無行程記錄</div>`;
-        return;
-      }
-
-      container.innerHTML = filtered.map(item => `
-        <div class="bg-white rounded-xl p-3.5 shadow-sm border border-slate-100 flex items-start justify-between gap-3">
-          <div class="flex items-start gap-3 flex-1">
-            <div class="bg-indigo-50 text-indigo-600 font-bold text-[10px] px-2 py-1 rounded-lg text-center min-w-[52px]">
-              <div>${item.day}</div>
-              <div class="text-[11px] font-mono mt-0.5">${item.time || '--:--'}</div>
-            </div>
-            <div class="space-y-0.5 flex-1">
-              <h4 class="font-bold text-slate-800 text-xs">${item.title}</h4>
-              ${item.note ? `<p class="text-[11px] text-slate-500">${item.note}</p>` : ''}
-              ${item.photo ? `<a href="${item.photo}" target="_blank" class="text-[10px] text-indigo-600 hover:underline block"><i class="fa-solid fa-image"></i> 查看附加圖片</a>` : ''}
-            </div>
-          </div>
-          <div class="flex items-center gap-1">
-            <button onclick="editItinerary(${item.id})" class="text-slate-300 hover:text-indigo-600 p-1 text-xs" title="編輯"><i class="fa-solid fa-pen"></i></button>
-            <button onclick="deleteItinerary(${item.id})" class="text-slate-300 hover:text-red-500 p-1 text-xs" title="刪除"><i class="fa-solid fa-trash-can"></i></button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function filterItinDay(day) {
+    function filterDay(day) {
       selectedDayFilter = day;
       renderItinerary();
     }
 
-    // Shopping List Functions
+    function renderItinerary() {
+      const dayFilterContainer = document.getElementById('day-filter-container');
+      const container = document.getElementById('itinerary-list-container');
+      if (!container) return;
+
+      const allDays = ['ALL', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'];
+      if (dayFilterContainer) {
+        dayFilterContainer.innerHTML = allDays.map(d => `
+          <button onclick="filterDay('${d}')" class="${selectedDayFilter === d ? 'bg-indigo-600 text-white shadow-xs font-bold' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'} text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition">
+            ${d === 'ALL' ? '全部天數' : d}
+          </button>
+        `).join('');
+      }
+
+      let filtered = itineraries;
+      if (selectedDayFilter !== 'ALL') {
+        filtered = itineraries.filter(i => i.day === selectedDayFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-slate-400 text-xs shadow-sm border border-slate-100">尚無相關行程記錄</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(i => `
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 space-y-2">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="bg-indigo-50 text-indigo-700 font-bold text-[11px] px-2.5 py-1 rounded-lg">${i.day}</span>
+              <span class="font-bold text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">${i.time || '--:--'}</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="editItinerary(${i.id})" class="text-slate-400 hover:text-indigo-600 p-1.5 text-xs"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteItinerary(${i.id})" class="text-slate-400 hover:text-red-500 p-1.5 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-slate-800 text-sm">${i.title}</h4>
+            ${i.note ? `<p class="text-xs text-slate-500 mt-0.5">${i.note}</p>` : ''}
+          </div>
+
+          ${i.photo ? `<div class="pt-1"><img src="${i.photo}" alt="行程照片" class="w-full max-h-48 object-cover rounded-xl border shadow-xs" /></div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // Shopping Functions
     function handleImageUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(event) {
-        const base64Str = event.target.result;
-        document.getElementById('shop-photo').value = base64Str;
-        document.getElementById('shop-preview-img').src = base64Str;
+      reader.onload = function(evt) {
+        document.getElementById('shop-photo').value = evt.target.result;
+        document.getElementById('shop-preview-img').src = evt.target.result;
         document.getElementById('shop-upload-preview').classList.remove('hidden');
       };
       reader.readAsDataURL(file);
@@ -1532,31 +1444,24 @@ function saveSheetData(ss, sheetName, items, keys) {
     function handleShopSubmit(e) {
       e.preventDefault();
       const editId = document.getElementById('shop-edit-id').value;
-      const name = document.getElementById('shop-title').value;
-      const price = document.getElementById('shop-price').value;
-      const category = document.getElementById('shop-category').value;
-      const photo = document.getElementById('shop-photo').value;
+      const data = {
+        id: editId ? Number(editId) : Date.now(),
+        name: document.getElementById('shop-title').value,
+        price: document.getElementById('shop-price').value || '',
+        category: document.getElementById('shop-category').value,
+        link: document.getElementById('shop-link').value || '',
+        photo: document.getElementById('shop-photo').value || '',
+        done: false
+      };
 
       if (editId) {
-        const item = shoppingItems.find(i => i.id == editId);
-        if (item) {
-          item.name = name;
-          item.price = price;
-          item.category = category;
-          if (photo) item.photo = photo;
-        }
-        showToast("血拼項目已更新！");
+        const existing = shoppingItems.find(s => s.id == editId);
+        if (existing) data.done = existing.done;
+        shoppingItems = shoppingItems.map(s => s.id == editId ? data : s);
+        showToast("血拼項目已更新並同步雲端！");
       } else {
-        const newItem = {
-          id: Date.now(),
-          name: name,
-          price: price,
-          category: category,
-          photo: photo,
-          done: false
-        };
-        shoppingItems.push(newItem);
-        showToast("血拼項目已新增！");
+        shoppingItems.push(data);
+        showToast("血拼項目已新增並同步雲端！");
       }
 
       localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
@@ -1565,14 +1470,17 @@ function saveSheetData(ss, sheetName, items, keys) {
       renderShopping();
     }
 
-    function editShopItem(id) {
-      const item = shoppingItems.find(i => i.id == id);
+    function editShopping(id) {
+      const item = shoppingItems.find(s => s.id == id);
       if (!item) return;
+
       document.getElementById('shop-edit-id').value = item.id;
-      document.getElementById('shop-title').value = item.name;
+      document.getElementById('shop-title').value = item.name || '';
       document.getElementById('shop-price').value = item.price || '';
       document.getElementById('shop-category').value = item.category || '藥妝';
+      document.getElementById('shop-link').value = item.link || '';
       document.getElementById('shop-photo').value = item.photo || '';
+
       if (item.photo) {
         document.getElementById('shop-preview-img').src = item.photo;
         document.getElementById('shop-upload-preview').classList.remove('hidden');
@@ -1580,20 +1488,18 @@ function saveSheetData(ss, sheetName, items, keys) {
         clearShopImage();
       }
 
-      document.getElementById('shop-form-heading').innerText = "編輯雲端血拼項目";
-      document.getElementById('shop-form-icon').className = "fa-solid fa-pen-to-square";
-      document.getElementById('shop-submit-btn').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 儲存修改`;
+      document.getElementById('shop-form-heading').innerText = "編輯血拼項目";
+      document.getElementById('shop-form-icon').className = "fa-solid fa-pen";
+      document.getElementById('shop-submit-btn').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 更新雲端購物項目`;
       document.getElementById('shop-cancel-btn').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function cancelShopEdit() {
+      document.getElementById('shopping-form').reset();
       document.getElementById('shop-edit-id').value = '';
-      document.getElementById('shop-title').value = '';
-      document.getElementById('shop-price').value = '';
-      document.getElementById('shop-category').value = '藥妝';
+      document.getElementById('shop-photo').value = '';
       clearShopImage();
-
       document.getElementById('shop-form-heading').innerText = "新增雲端血拼項目 (支援圖片上傳)";
       document.getElementById('shop-form-icon').className = "fa-solid fa-bag-shopping";
       document.getElementById('shop-submit-btn').innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> 同步新增至雲端購物單`;
@@ -1601,34 +1507,29 @@ function saveSheetData(ss, sheetName, items, keys) {
     }
 
     function toggleShopDone(id) {
-      const item = shoppingItems.find(i => i.id == id);
-      if (item) {
-        item.done = !item.done;
-        localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
-        pushDataToCloud('saveShopping', shoppingItems);
-        renderShopping();
-      }
-    }
-
-    function deleteShopItem(id) {
-      shoppingItems = shoppingItems.filter(i => i.id !== id);
+      shoppingItems = shoppingItems.map(s => s.id === id ? { ...s, done: !s.done } : s);
       localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
       pushDataToCloud('saveShopping', shoppingItems);
       renderShopping();
-      showToast("已刪除血拼項目");
+    }
+
+    function deleteShopping(id) {
+      shoppingItems = shoppingItems.filter(s => s.id !== id);
+      localStorage.setItem('travel_shopping', JSON.stringify(shoppingItems));
+      pushDataToCloud('saveShopping', shoppingItems);
+      renderShopping();
+      showToast("血拼項目已刪除");
     }
 
     function filterShopCategory(cat) {
       selectedShopCategory = cat;
-      const categories = ['ALL', '藥妝', '零食', '電器', '服飾'];
-      categories.forEach(c => {
+      ['ALL', '藥妝', '零食', '電器', '服飾'].forEach(c => {
         const btn = document.getElementById(`shop-cat-${c}`);
-        if (btn) {
-          if (c === cat) {
-            btn.className = "bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-xs whitespace-nowrap";
-          } else {
-            btn.className = "bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap";
-          }
+        if (!btn) return;
+        if (c === cat) {
+          btn.className = "bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-full font-medium shadow-xs whitespace-nowrap";
+        } else {
+          btn.className = "bg-slate-200 text-slate-700 hover:bg-slate-300 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap";
         }
       });
       renderShopping();
@@ -1638,58 +1539,60 @@ function saveSheetData(ss, sheetName, items, keys) {
       const container = document.getElementById('shopping-list-container');
       if (!container) return;
 
-      const filtered = selectedShopCategory === 'ALL' ? shoppingItems : shoppingItems.filter(i => i.category === selectedShopCategory);
+      let filtered = shoppingItems;
+      if (selectedShopCategory !== 'ALL') {
+        filtered = shoppingItems.filter(s => s.category === selectedShopCategory);
+      }
+
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs">此分類尚無血拼項目</div>`;
+        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-slate-400 text-xs shadow-sm border border-slate-100">尚未新增任何血拼商品</div>`;
         return;
       }
 
-      container.innerHTML = filtered.map(item => `
-        <div class="bg-white rounded-xl p-3 shadow-sm border border-slate-100 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 flex-1">
-            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleShopDone(${item.id})" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer" />
-            ${item.photo ? `<img src="${item.photo}" class="w-12 h-12 object-cover rounded-lg border flex-shrink-0" onerror="this.style.display='none'" />` : ''}
-            <div class="space-y-0.5 flex-1">
-              <h4 class="font-bold text-xs ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}">${item.name}</h4>
-              <div class="flex items-center gap-2 text-[10px] text-slate-500">
-                <span class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-medium">${item.category || '其他'}</span>
-                ${item.price ? `<span>價錢/數量: <b class="text-slate-700">${item.price}</b></span>` : ''}
+      container.innerHTML = filtered.map(s => `
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <input type="checkbox" ${s.done ? 'checked' : ''} onchange="toggleShopDone(${s.id})" class="w-5 h-5 rounded accent-indigo-600 cursor-pointer shrink-0" />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-xs text-slate-800 truncate ${s.done ? 'line-through text-slate-400' : ''}">${s.name}</span>
+                <span class="text-[10px] bg-indigo-50 text-indigo-600 font-semibold px-2 py-0.5 rounded shrink-0">${s.category || '其他'}</span>
+              </div>
+              <div class="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                ${s.price ? `<span class="font-bold text-indigo-600">${s.price}</span>` : ''}
+                ${s.link ? `<a href="${s.link}" target="_blank" class="text-indigo-600 hover:underline font-medium flex items-center gap-1"><i class="fa-solid fa-link"></i> 連結</a>` : ''}
               </div>
             </div>
           </div>
-          <div class="flex items-center gap-1">
-            <button onclick="editShopItem(${item.id})" class="text-slate-300 hover:text-indigo-600 p-1.5 text-xs"><i class="fa-solid fa-pen"></i></button>
-            <button onclick="deleteShopItem(${item.id})" class="text-slate-300 hover:text-red-500 p-1.5 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+          
+          <div class="flex items-center gap-2 shrink-0">
+            ${s.photo ? `<img src="${s.photo}" alt="縮圖" class="w-12 h-12 object-cover rounded-xl border shadow-xs" />` : ''}
+            <div class="flex flex-col gap-1">
+              <button onclick="editShopping(${s.id})" class="text-slate-400 hover:text-indigo-600 p-1 text-xs"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteShopping(${s.id})" class="text-slate-400 hover:text-red-500 p-1 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
           </div>
         </div>
       `).join('');
     }
 
-    // Expense & Ticket Functions
+    // Expense Functions
     function handleExpenseSubmit(e) {
       e.preventDefault();
       const editId = document.getElementById('expense-edit-id').value;
-      const title = document.getElementById('expense-title').value;
-      const cat = document.getElementById('expense-cat').value;
-      const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+      const data = {
+        id: editId ? Number(editId) : Date.now(),
+        title: document.getElementById('expense-title').value,
+        cat: document.getElementById('expense-cat').value,
+        amount: Number(document.getElementById('expense-amount').value) || 0
+      };
 
       if (editId) {
-        const item = expenses.find(i => i.id == editId);
-        if (item) {
-          item.title = title;
-          item.cat = cat;
-          item.amount = amount;
-        }
-        showToast("票券開支已更新！");
+        expenses = expenses.map(ex => ex.id == editId ? data : ex);
+        showToast("門票車票已更新！");
       } else {
-        const newItem = {
-          id: Date.now(),
-          title: title,
-          cat: cat,
-          amount: amount
-        };
-        expenses.push(newItem);
-        showToast("票券開支已記錄！");
+        expenses.push(data);
+        showToast("門票車票已記錄！");
       }
 
       localStorage.setItem('travel_expenses', JSON.stringify(expenses));
@@ -1699,26 +1602,23 @@ function saveSheetData(ss, sheetName, items, keys) {
     }
 
     function editExpense(id) {
-      const item = expenses.find(i => i.id == id);
-      if (!item) return;
-      document.getElementById('expense-edit-id').value = item.id;
-      document.getElementById('expense-title').value = item.title;
-      document.getElementById('expense-cat').value = item.cat || '景點門票';
-      document.getElementById('expense-amount').value = item.amount;
+      const ex = expenses.find(item => item.id == id);
+      if (!ex) return;
 
-      document.getElementById('expense-form-heading').innerText = "編輯票券交通開支";
-      document.getElementById('expense-form-icon').className = "fa-solid fa-pen-to-square";
-      document.getElementById('expense-submit-btn').innerText = "儲存修改";
+      document.getElementById('expense-edit-id').value = ex.id;
+      document.getElementById('expense-title').value = ex.title || '';
+      document.getElementById('expense-cat').value = ex.cat || '景點門票';
+      document.getElementById('expense-amount').value = ex.amount || 0;
+
+      document.getElementById('expense-form-heading').innerText = "編輯門票與交通車票";
+      document.getElementById('expense-form-icon').className = "fa-solid fa-pen";
+      document.getElementById('expense-submit-btn').innerText = "更新記錄";
       document.getElementById('expense-cancel-btn').classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function cancelExpenseEdit() {
+      document.getElementById('expense-form').reset();
       document.getElementById('expense-edit-id').value = '';
-      document.getElementById('expense-title').value = '';
-      document.getElementById('expense-cat').value = '景點門票';
-      document.getElementById('expense-amount').value = '';
-
       document.getElementById('expense-form-heading').innerText = "記錄門票及交通車票 (雲端同步)";
       document.getElementById('expense-form-icon').className = "fa-solid fa-ticket";
       document.getElementById('expense-submit-btn').innerText = "同步記錄";
@@ -1726,47 +1626,102 @@ function saveSheetData(ss, sheetName, items, keys) {
     }
 
     function deleteExpense(id) {
-      expenses = expenses.filter(i => i.id !== id);
+      expenses = expenses.filter(ex => ex.id !== id);
       localStorage.setItem('travel_expenses', JSON.stringify(expenses));
       pushDataToCloud('saveExpenses', expenses);
       renderExpenses();
-      showToast("已刪除票券開支");
+      showToast("開支記錄已刪除");
     }
 
     function renderExpenses() {
       const container = document.getElementById('expense-list');
       const totalEl = document.getElementById('expense-total-hkd');
-      if (!container || !totalEl) return;
+      if (!container) return;
 
-      let total = 0;
-      expenses.forEach(i => total += (parseFloat(i.amount) || 0));
-      totalEl.innerText = `HK$ ${total.toFixed(2)}`;
+      const total = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+      if (totalEl) totalEl.innerText = `HK$ ${total.toFixed(2)}`;
 
       if (expenses.length === 0) {
-        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-slate-400 text-xs">尚未記錄任何門票或車票</div>`;
+        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-slate-400 text-xs shadow-sm border border-slate-100">尚未記錄任何門票或車票</div>`;
         return;
       }
 
-      container.innerHTML = expenses.map(item => `
-        <div class="bg-white rounded-xl p-3 shadow-sm border border-slate-100 flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
-              <i class="fa-solid fa-ticket"></i>
+      container.innerHTML = expenses.map(ex => `
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
+              <i class="fa-solid fa-ticket text-xs"></i>
             </div>
             <div>
-              <h4 class="font-bold text-xs text-slate-800">${item.title}</h4>
-              <span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${item.cat || '景點門票'}</span>
+              <h4 class="font-bold text-slate-800 text-xs">${ex.title}</h4>
+              <span class="text-[10px] text-slate-400">${ex.cat || '票券'}</span>
             </div>
           </div>
           <div class="flex items-center gap-3">
-            <span class="font-black text-indigo-600 text-xs">HK$ ${parseFloat(item.amount).toFixed(2)}</span>
+            <span class="font-black text-indigo-600 text-sm">HK$ ${Number(ex.amount || 0).toFixed(2)}</span>
             <div class="flex items-center gap-1">
-              <button onclick="editExpense(${item.id})" class="text-slate-300 hover:text-indigo-600 p-1 text-xs"><i class="fa-solid fa-pen"></i></button>
-              <button onclick="deleteExpense(${item.id})" class="text-slate-300 hover:text-red-500 p-1 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+              <button onclick="editExpense(${ex.id})" class="text-slate-400 hover:text-indigo-600 p-1 text-xs"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteExpense(${ex.id})" class="text-slate-400 hover:text-red-500 p-1 text-xs"><i class="fa-solid fa-trash-can"></i></button>
             </div>
           </div>
         </div>
       `).join('');
+    }
+
+    // Exchange Rate Functions
+    async function fetchRates(isManual = false) {
+      const refreshIcon = document.getElementById('refresh-icon');
+      if (refreshIcon) refreshIcon.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/HKD');
+        const data = await res.json();
+        if (data && data.rates) {
+          const hkdRates = data.rates;
+          rates.JPY = 1 / hkdRates.JPY;
+          rates.TWD = 1 / hkdRates.TWD;
+          rates.KRW = 1 / hkdRates.KRW;
+          rates.USD = 1 / hkdRates.USD;
+          rates.EUR = 1 / hkdRates.EUR;
+          rates.THB = 1 / hkdRates.THB;
+          rates.GBP = 1 / hkdRates.GBP;
+          rates.CNY = 1 / hkdRates.CNY;
+
+          localStorage.setItem('travel_rates', JSON.stringify(rates));
+          document.getElementById('rate-timestamp').innerText = "已更新最新匯率";
+          convertCurrency();
+          if (isManual) showToast("匯率更新成功！");
+        }
+      } catch (err) {
+        console.error("Fetch rates error:", err);
+        if (isManual) showToast("使用離線標準匯率", "info");
+      } finally {
+        if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+      }
+    }
+
+    function convertCurrency() {
+      const curr = document.getElementById('fx-currency').value;
+      const foreignInput = document.getElementById('fx-foreign').value;
+      const hkdInput = document.getElementById('fx-hkd');
+
+      const val = parseFloat(foreignInput) || 0;
+      const rate = rates[curr] || 0.052;
+      const result = val * rate;
+
+      hkdInput.value = result.toFixed(2);
+    }
+
+    function addAmount(delta) {
+      const input = document.getElementById('fx-foreign');
+      const current = parseFloat(input.value) || 0;
+      input.value = current + delta;
+      convertCurrency();
+    }
+
+    function clearAmount() {
+      document.getElementById('fx-foreign').value = '';
+      convertCurrency();
     }
 
     // Translation Functions
@@ -1774,41 +1729,58 @@ function saveSheetData(ss, sheetName, items, keys) {
       const text = document.getElementById('trans-input').value.trim();
       const source = document.getElementById('trans-source').value;
       const target = document.getElementById('trans-target').value;
+      const resultBox = document.getElementById('trans-result-box');
+      const resultText = document.getElementById('trans-result-text');
+
       if (!text) {
         showToast("請輸入要翻譯的文字", "error");
         return;
       }
 
-      showToast("正在即時翻譯...", "info");
+      showToast("正在翻譯中...", "info");
       try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
         const res = await fetch(url);
         const data = await res.json();
-        if (data && data[0]) {
-          const translated = data[0].map(item => item[0]).join('');
+
+        if (data && data.responseData && data.responseData.translatedText) {
+          const translated = data.responseData.translatedText;
           currentTranslatedResult = translated;
           bigCardState = { zh: text, target: translated, lang: target };
 
-          document.getElementById('trans-result-text').innerText = translated;
-          document.getElementById('trans-result-box').classList.remove('hidden');
+          resultText.innerText = translated;
+          resultBox.classList.remove('hidden');
           showToast("翻譯完成！");
+        } else {
+          showToast("翻譯失敗，請稍後再試", "error");
         }
       } catch (err) {
         console.error("Translation error:", err);
-        showToast("翻譯失敗，請檢查網絡", "error");
+        showToast("翻譯發生網絡錯誤", "error");
       }
     }
 
     function speakTranslation() {
       if (!currentTranslatedResult) return;
-      const utterance = new SpeechSynthesisUtterance(currentTranslatedResult);
-      utterance.lang = bigCardState.lang;
+      const targetLang = document.getElementById('trans-target').value;
+      speakText(currentTranslatedResult, targetLang);
+    }
+
+    function speakText(txt, langCode) {
+      if (!('speechSynthesis' in window)) {
+        showToast("您的瀏覽器不支援語音朗讀功能", "error");
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(txt);
+      utterance.lang = langCode === 'ja' ? 'ja-JP' : (langCode === 'ko' ? 'ko-KR' : (langCode === 'th' ? 'th-TH' : (langCode === 'en' ? 'en-US' : 'zh-TW')));
       window.speechSynthesis.speak(utterance);
     }
 
     function showBigCardFromTranslation() {
       if (!currentTranslatedResult) return;
-      document.getElementById('big-card-zh').innerText = document.getElementById('trans-input').value;
+      document.getElementById('big-card-subtitle').innerText = `翻譯結果 (${document.getElementById('trans-target').value.toUpperCase()})`;
+      document.getElementById('big-card-zh').innerText = `原文: "${document.getElementById('trans-input').value}"`;
       document.getElementById('big-card-target').innerText = currentTranslatedResult;
       document.getElementById('big-card-modal').classList.remove('hidden');
     }
@@ -1818,12 +1790,77 @@ function saveSheetData(ss, sheetName, items, keys) {
     }
 
     function speakBigCardText() {
-      if (!bigCardState.target) return;
-      const utterance = new SpeechSynthesisUtterance(bigCardState.target);
-      utterance.lang = bigCardState.lang;
-      window.speechSynthesis.speak(utterance);
+      if (bigCardState.target) {
+        speakText(bigCardState.target, bigCardState.lang);
+      }
+    }
+
+    // Cloud Config Modal
+    function openConfigModal() {
+      document.getElementById('script-url-input').value = scriptUrl;
+      document.getElementById('config-modal').classList.remove('hidden');
+    }
+
+    function closeConfigModal() {
+      document.getElementById('config-modal').classList.add('hidden');
+    }
+
+    function saveScriptUrl() {
+      const val = document.getElementById('script-url-input').value.trim();
+      scriptUrl = val;
+      localStorage.setItem('travel_script_url', scriptUrl);
+      isCloudConnected = Boolean(scriptUrl);
+      updateConnectionStatus();
+      closeConfigModal();
+      showToast(isCloudConnected ? "已成功連線雲端試算表！" : "已切換回本地模式");
+      if (isCloudConnected) syncDataFromCloud();
+    }
+
+    function copyAppsScriptCode() {
+      const codeArea = document.getElementById('gas-code-text');
+      codeArea.classList.remove('hidden');
+      codeArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Google Apps Script 完整程式碼已複製到剪貼簿！");
+      } catch (err) {
+        showToast("複製失敗，請手動複製", "error");
+      }
+      codeArea.classList.add('hidden');
+    }
+
+    // Tabs
+    function switchTab(tabId, save = true) {
+      const tabs = ['exchange', 'bookings', 'itinerary', 'shopping', 'expenses', 'weather', 'translate'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (!sec || !btn) return;
+        if (t === tabId) {
+          sec.classList.remove('hidden');
+          btn.className = "flex-1 min-w-[58px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-white text-white font-semibold transition-all";
+        } else {
+          sec.classList.add('hidden');
+          btn.className = "flex-1 min-w-[58px] py-2.5 text-center flex flex-col items-center gap-1 border-b-2 border-transparent text-indigo-200 hover:text-white transition-all";
+        }
+      });
+      if (save) {
+        localStorage.setItem('travel_active_tab', tabId);
+      }
+    }
+
+    // Toast Notification Helper
+    function showToast(msg, type = "success") {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.innerText = msg;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3000);
     }
   </script>
-
 </body>
 </html>
